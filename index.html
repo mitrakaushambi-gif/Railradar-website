@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RailHorizon 360 - Live Rail Transit Intelligence, Weather Radar & Topographic Corridor Cockpit</title>
+  <meta name="description" content="Next-generation railway transit intelligence platform unifying real-time train telemetry, MapTiler vector cartography, OpenTopo elevation modeling, and OpenWeather radar overlays.">
+  <meta name="keywords" content="railway intelligence, live train tracking, maptiler, openweather, railradar, opentopo, elevation profile, train pnr, vande bharat, rajdhani">
+  <meta name="theme-color" content="#070a11">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- MapLibre GL JS for MapTiler Vector & Raster Streaming -->
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css">
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Top Application Header -->
+  <header class="app-header">
+    <div class="brand-wrapper" id="brand-home-btn" title="RailHorizon 360 Home">
+      <div class="brand-logo-icon">
+        <svg viewBox="0 0 24 24">
+          <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+          <line x1="4" y1="22" x2="4" y2="15"></line>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h1>RailHorizon 360 <span class="badge-pro">SaaS v1.0</span></h1>
+        <div class="brand-subtitle">Corridor Geospatial & Telemetry Cockpit</div>
+      </div>
+    </div>
+
+    <!-- Global Omnibox Search -->
+    <div class="header-search-container">
+      <div class="search-input-wrapper">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="global-search-input" class="search-input" placeholder="Search Train No (12951), Name, Station, or PNR..." autocomplete="off">
+        <span class="search-shortcut-badge">⌘K</span>
+      </div>
+      <div id="search-dropdown-results" class="search-dropdown">
+        <!-- Injected via JavaScript -->
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs-wrapper" aria-label="Main Navigation">
+      <button class="nav-tab-btn active" id="tab-btn-cockpit" data-target="view-cockpit">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="m14 9 3 3-3 3"/></svg>
+        Live Cockpit
+      </button>
+      <button class="nav-tab-btn" id="tab-btn-station-board" data-target="view-station-board">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Station Board
+      </button>
+      <button class="nav-tab-btn" id="tab-btn-pnr-inspector" data-target="view-pnr-inspector">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        PNR & Berth
+      </button>
+      <button class="nav-tab-btn" id="tab-btn-corridor-radar" data-target="view-corridor-radar">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+        Corridor Hazards
+      </button>
+      <button class="nav-tab-btn" id="tab-btn-fleet-watchlist" data-target="view-fleet-watchlist">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Fleet SaaS
+      </button>
+    </nav>
+
+    <!-- System Live Telemetry Indicator -->
+    <div class="header-system-telemetry">
+      <div class="live-pulse-badge">
+        <span class="live-beacon"></span>
+        <span id="system-time-display">GPS SYNC 10:14:02 IST</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Viewports -->
+  <main class="main-viewport">
+
+    <!-- ====================================================================
+         VIEW 1: LIVE TRAIN COCKPIT
+         ==================================================================== -->
+    <section id="view-cockpit" class="view-section active">
+      <div class="cockpit-container">
+        
+        <!-- Left Telemetry Sidebar -->
+        <aside class="telemetry-sidebar" aria-label="Train Running Telemetry">
+          
+          <!-- Hero Train Header Card -->
+          <div class="train-hero-card" id="train-hero-block">
+            <div class="train-header-row">
+              <span class="train-tag" id="hero-train-number">12951</span>
+              <span class="train-zone" id="hero-train-zone">Western Railway (WR)</span>
+            </div>
+            <h2 class="train-title-name" id="hero-train-name">Mumbai Tejas Rajdhani Express</h2>
+            
+            <div class="train-route-endpoints">
+              <div class="endpoint-block">
+                <span class="endpoint-code" id="hero-origin-code">MMCT</span>
+                <span class="endpoint-name" id="hero-origin-name">Mumbai Central</span>
+              </div>
+              <span class="route-arrow-icon">➔</span>
+              <div class="endpoint-block" style="text-align: right;">
+                <span class="endpoint-code" id="hero-dest-code">NDLS</span>
+                <span class="endpoint-name" id="hero-dest-name">New Delhi</span>
+              </div>
+            </div>
+
+            <!-- Live Status Banner -->
+            <div class="status-pill-banner warning" id="hero-status-banner">
+              <div class="status-banner-text">
+                <span id="hero-status-label">RUNNING LATE</span>
+                <span class="status-sub-delta" id="hero-status-delta">+14 mins behind schedule</span>
+              </div>
+              <span id="hero-status-speed" style="font-family: var(--font-mono); font-weight: 700;">108 km/h</span>
+            </div>
+
+            <!-- Telemetry Metrics Grid -->
+            <div class="telemetry-metrics-grid">
+              <div class="metric-box">
+                <div class="metric-label">Current Speed</div>
+                <div class="metric-value" id="metric-speed">108 <span class="metric-unit">km/h</span></div>
+              </div>
+              <div class="metric-box">
+                <div class="metric-label">Covered Dist</div>
+                <div class="metric-value" id="metric-covered">428 <span class="metric-unit">km</span></div>
+              </div>
+              <div class="metric-box">
+                <div class="metric-label">Max Speed</div>
+                <div class="metric-value" id="metric-max-speed">130 <span class="metric-unit">km/h</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Next Halt Callout -->
+          <div class="next-halt-card" id="next-halt-block">
+            <div class="next-halt-label">
+              <span>Next Operational Halt</span>
+              <span id="next-halt-eta">ETA: 00:39</span>
+            </div>
+            <div class="next-halt-title" id="next-halt-name">Ratlam Junction (RTM)</div>
+            <div class="next-halt-meta">
+              <span id="next-halt-platform">Platform 5</span>
+              <span>•</span>
+              <span id="next-halt-distance">In 42 km</span>
+              <span>•</span>
+              <div class="weather-chip" id="next-halt-weather">
+                <span>⛅ 24°C</span>
+                <span style="color: #94a3b8; font-size: 0.68rem;">Clear</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Simulation / Action Toolbar -->
+          <div class="cockpit-action-toolbar">
+            <button class="btn-simulate" id="btn-toggle-simulation">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <span id="sim-btn-text">Simulate Live Movement</span>
+            </button>
+            <button class="sim-speed-btn" id="btn-sim-speed" title="Simulation Speed">Speed: 2x</button>
+            <button class="sim-speed-btn" id="btn-recenter-train" title="Center Camera on Train">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+
+          <!-- Station Schedule Timeline -->
+          <div class="timeline-section">
+            <div class="section-headline">
+              <span>Station Schedule & Live Delays</span>
+              <span id="timeline-station-count" style="font-family: var(--font-mono); font-size: 0.74rem;">9 Halts</span>
+            </div>
+            <div class="station-timeline-list" id="station-timeline-container">
+              <!-- Dynamically populated via app.js -->
+            </div>
+          </div>
+        </aside>
+
+        <!-- Right Map Viewport & Floating HUD -->
+        <div class="map-viewport-wrapper">
+          <div id="maptiler-map-canvas"></div>
+
+          <!-- Floating Map Controls HUD -->
+          <div class="map-floating-hud">
+            
+            <!-- Map Theme Selector -->
+            <div class="hud-control-group">
+              <button class="hud-btn active" id="btn-style-dark" data-style="dataviz-dark">
+                <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                Dark Transit
+              </button>
+              <button class="hud-btn" id="btn-style-topo" data-style="topo-v2">
+                <svg viewBox="0 0 24 24"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></svg>
+                Topographic
+              </button>
+              <button class="hud-btn" id="btn-style-hybrid" data-style="hybrid">
+                <svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                Satellite Hybrid
+              </button>
+            </div>
+
+            <!-- Weather Radar & 3D Pitch Controls -->
+            <div class="hud-control-group">
+              <button class="hud-btn active" id="btn-toggle-weather-layer">
+                <svg viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+                Live Radar Layer
+              </button>
+              <button class="hud-btn" id="btn-toggle-3d-pitch">
+                <svg viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                3D Terrain Tilt (45°)
+              </button>
+            </div>
+
+            <!-- Radar Opacity Slider -->
+            <div class="weather-opacity-box">
+              <label for="radar-opacity-input">Radar Opacity <span id="radar-opacity-val">75%</span></label>
+              <input type="range" id="radar-opacity-input" class="weather-opacity-slider" min="10" max="100" value="75">
+            </div>
+
+          </div>
+
+          <!-- Bottom Collapsible OpenTopo Elevation Drawer -->
+          <div class="elevation-drawer" id="elevation-drawer-component">
+            <div class="elevation-header" id="elevation-toggle-header">
+              <div class="elevation-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                <span>Corridor Elevation Profile (OpenTopo DEM)</span>
+              </div>
+              <div class="elevation-scrub-info" id="elevation-hover-badge">
+                Hover along profile to inspect terrain altitude & gradient
+              </div>
+              <button class="elevation-toggle-btn" id="btn-collapse-elevation" title="Toggle Elevation Profile">▼</button>
+            </div>
+            <div class="elevation-body" id="elevation-body-chart">
+              <svg class="elevation-svg-canvas" id="elevation-svg-element" preserveAspectRatio="none">
+                <!-- SVG Area and Scrubber Lines drawn by JS -->
+              </svg>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         VIEW 2: LIVE STATION BOARD
+         ==================================================================== -->
+    <section id="view-station-board" class="view-section">
+      <div class="station-board-view">
+        
+        <div class="board-top-grid">
+          <!-- Station Selector & Info -->
+          <div class="station-header-card">
+            <div>
+              <div style="font-size: 0.74rem; font-weight: 700; text-transform: uppercase; color: var(--brand-cyan); letter-spacing: 0.05em;">Live Junction Terminal Board</div>
+              <h2 style="font-family: var(--font-sans); font-size: 1.8rem; font-weight: 800; color: #ffffff; margin: 4px 0;" id="station-board-active-name">New Delhi Railway Station (NDLS)</h2>
+              <div style="font-size: 0.82rem; color: #94a3b8;">Northern Railway Zone • 16 Active High-Speed Platforms • Real-Time Interlocking Telemetry</div>
+            </div>
+
+            <!-- Quick Select Station Pills -->
+            <div class="station-quick-select-row">
+              <span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">Switch Terminal:</span>
+              <button class="station-pill-btn active" data-stcode="NDLS">New Delhi (NDLS)</button>
+              <button class="station-pill-btn" data-stcode="MMCT">Mumbai Central (MMCT)</button>
+              <button class="station-pill-btn" data-stcode="HWH">Howrah Jn (HWH)</button>
+            </div>
+          </div>
+
+          <!-- Station Ambient Weather Overview (OpenWeather) -->
+          <div class="station-weather-overview-card">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <div>
+                <span style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #94a3b8;">Ambient Terminal Weather</span>
+                <div style="font-family: var(--font-sans); font-size: 1.4rem; font-weight: 700; color: #ffffff; margin-top: 4px;" id="stn-weather-desc">Dense Fog Advisory</div>
+              </div>
+              <div style="font-family: var(--font-mono); font-size: 1.6rem; font-weight: 700; color: var(--brand-cyan);" id="stn-weather-temp">11°C</div>
+            </div>
+
+            <div class="weather-metric-row">
+              <div class="weather-metric-item">
+                <div class="val" id="stn-weather-vis">120m</div>
+                <div class="lbl">Visibility</div>
+              </div>
+              <div class="weather-metric-item">
+                <div class="val" id="stn-weather-hum">92%</div>
+                <div class="lbl">Humidity</div>
+              </div>
+              <div class="weather-metric-item">
+                <div class="val" id="stn-weather-wind">4 km/h</div>
+                <div class="lbl">Wind</div>
+              </div>
+              <div class="weather-metric-item">
+                <div class="val" style="color: var(--status-warning);" id="stn-weather-hazard">Moderate</div>
+                <div class="lbl">Hazard Index</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Board Table Card -->
+        <div class="board-table-card">
+          <div class="board-table-controls">
+            <div class="window-tabs-group">
+              <button class="window-tab-btn active" data-hours="2">Next 2 Hours</button>
+              <button class="window-tab-btn" data-hours="4">Next 4 Hours</button>
+              <button class="window-tab-btn" data-hours="8">Next 8 Hours</button>
+            </div>
+            <div style="font-size: 0.8rem; color: #94a3b8;">
+              Live Rake Signal Status • Auto-Refreshes every 30s
+            </div>
+          </div>
+
+          <div class="data-table-container">
+            <table class="modern-data-table" id="station-board-table">
+              <thead>
+                <tr>
+                  <th>Train & Service</th>
+                  <th>Destination / Route</th>
+                  <th>Sched Departure</th>
+                  <th>Expected (Live)</th>
+                  <th>Platform</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="station-board-tbody">
+                <!-- Dynamically populated via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         VIEW 3: PNR STATUS & COACH RAKE INSPECTOR
+         ==================================================================== -->
+    <section id="view-pnr-inspector" class="view-section">
+      <div class="pnr-view">
+
+        <!-- PNR Search Input Card -->
+        <div class="pnr-search-card">
+          <div style="font-size: 0.74rem; font-weight: 700; text-transform: uppercase; color: var(--brand-cyan);">Passenger Name Record (PNR) & Seat Allocation</div>
+          <h2 style="font-family: var(--font-sans); font-size: 1.5rem; font-weight: 700; margin: 4px 0;">Live PNR Confirmation & Smart Coach Berth Inspector</h2>
+          <p style="font-size: 0.84rem; color: #94a3b8;">Enter your 10-digit ticket PNR to check real-time waitlist confirmation odds, coach position, and interactive compartment seat layout.</p>
+
+          <div class="pnr-input-row">
+            <input type="text" id="pnr-query-input" class="pnr-text-input" placeholder="e.g. 2418937210" maxlength="10">
+            <button class="btn-submit-pnr" id="btn-fetch-pnr">Inspect Ticket</button>
+          </div>
+
+          <div class="pnr-demo-presets">
+            <span>Try sample PNRs:</span>
+            <button class="pnr-demo-chip" data-pnr="2418937210">2418937210 (Rajdhani CNF)</button>
+            <button class="pnr-demo-chip" data-pnr="8529143670">8529143670 (Vande Bharat EC)</button>
+            <button class="pnr-demo-chip" data-pnr="4109283745">4109283745 (Waiting List)</button>
+          </div>
+        </div>
+
+        <!-- PNR Results Grid -->
+        <div class="pnr-result-grid" id="pnr-result-container">
+          
+          <!-- Passenger Status Card -->
+          <div class="passenger-status-card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <span style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--brand-cyan); font-weight: 700;" id="pnr-card-number">PNR: 2418937210</span>
+                <h3 style="font-family: var(--font-sans); font-size: 1.2rem; font-weight: 700; margin: 4px 0;" id="pnr-card-train-title">12951 • Mumbai Tejas Rajdhani Express</h3>
+                <div style="font-size: 0.78rem; color: #94a3b8;" id="pnr-card-journey-meta">MMCT ➔ NDLS • Date: Oct 5, 2026 • Class: 3A (3rd AC)</div>
+              </div>
+              <span class="live-pulse-badge" id="pnr-chart-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border-color: rgba(16, 185, 129, 0.3);">
+                Chart Prepared
+              </span>
+            </div>
+
+            <table class="passenger-table">
+              <thead>
+                <tr>
+                  <th>Passenger</th>
+                  <th>Booking Status</th>
+                  <th>Current Status</th>
+                  <th>Coach & Berth</th>
+                  <th>Berth Type</th>
+                </tr>
+              </thead>
+              <tbody id="pnr-passengers-tbody">
+                <!-- Dynamically generated via app.js -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- AI Confirmation Probability Card -->
+          <div class="confirmation-gauge-card">
+            <span style="font-size: 0.74rem; font-weight: 700; text-transform: uppercase; color: #94a3b8;">AI Confirmation Probability</span>
+            <div class="gauge-circle">
+              <svg width="130" height="130" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.08)" stroke-width="8" fill="none"/>
+                <circle id="gauge-circle-progress" cx="50" cy="50" r="42" stroke="var(--brand-cyan)" stroke-width="8" fill="none"
+                        stroke-dasharray="264" stroke-dashoffset="10" stroke-linecap="round"/>
+              </svg>
+              <div class="gauge-circle-text" id="gauge-percentage-text">98%</div>
+            </div>
+            <div style="font-size: 0.88rem; font-weight: 700; color: #10b981;" id="gauge-status-desc">Confirmed / Allotted</div>
+            <div style="font-size: 0.74rem; color: #94a3b8; margin-top: 4px;">Predictive machine learning model calibrated with historical chart clearance trends.</div>
+          </div>
+
+        </div>
+
+        <!-- Coach Rake Composition Assembly -->
+        <div class="coach-rake-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div>
+              <h3 style="font-family: var(--font-sans); font-size: 1.05rem; font-weight: 700; color: #ffffff;">Visual Rake Coach Assembly & Platform Orientation</h3>
+              <p style="font-size: 0.78rem; color: #94a3b8;">Click on your coach (<span style="color: var(--brand-cyan); font-weight: 700;" id="user-coach-highlight-tag">B4</span>) to view interactive seat & compartment floorplan.</p>
+            </div>
+            <span style="font-size: 0.74rem; color: #64748b; font-family: var(--font-mono);">Engine Front ➔</span>
+          </div>
+
+          <div class="rake-track-wrapper">
+            <div class="rake-assembly-line" id="rake-assembly-container">
+              <!-- Coaches injected by JS -->
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         VIEW 4: CORRIDOR WEATHER RADAR & HAZARDS
+         ==================================================================== -->
+    <section id="view-corridor-radar" class="view-section">
+      <div class="corridor-view">
+
+        <div>
+          <div style="font-size: 0.74rem; font-weight: 700; text-transform: uppercase; color: var(--brand-cyan);">Corridor-Wide Meteorological Risk Assessment</div>
+          <h2 style="font-family: var(--font-sans); font-size: 1.6rem; font-weight: 800; margin: 4px 0;">National Rail Atmospheric Radar & Speed Advisories</h2>
+          <p style="font-size: 0.84rem; color: #94a3b8;">Real-time corridor risk analysis integrating OpenWeather precipitation Doppler cells, dense fog inversion modeling, and topographical wind factors.</p>
+        </div>
+
+        <!-- Corridor Selector Tabs -->
+        <div class="corridor-selector-tabs" id="corridors-tabs-container">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Corridor Details Grid -->
+        <div class="corridor-details-grid">
+          
+          <!-- Hazard Alert Box -->
+          <div class="corridor-hazard-card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <h3 style="font-family: var(--font-sans); font-size: 1.15rem; font-weight: 700;" id="corridor-active-title">Northern Gangetic Fog Corridor</h3>
+              <span class="corridor-status-tag high" id="corridor-active-badge">HIGH HAZARD</span>
+            </div>
+
+            <div class="hazard-alert-box" id="corridor-hazard-alert-box">
+              <div class="hazard-alert-title" id="corridor-hazard-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <span id="corridor-hazard-heading">Dense Winter Fog & Inversion Layer</span>
+              </div>
+              <div class="hazard-alert-desc" id="corridor-hazard-text">
+                Widespread dense radiation fog reducing runway and signal visibility to under 120 meters. Automatic train protection protocols enforce 60 km/h ceiling speed.
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 20px;">
+              <div class="metric-box">
+                <div class="metric-label">Avg Temp</div>
+                <div class="metric-value" id="corridor-temp">11°C</div>
+              </div>
+              <div class="metric-box">
+                <div class="metric-label">Min Visibility</div>
+                <div class="metric-value" id="corridor-vis" style="color: var(--status-delayed);">110 m</div>
+              </div>
+              <div class="metric-box">
+                <div class="metric-label">Humidity</div>
+                <div class="metric-value" id="corridor-hum">94%</div>
+              </div>
+              <div class="metric-box">
+                <div class="metric-label">Active Rakes</div>
+                <div class="metric-value" id="corridor-trains">84</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Delay Correlation Analytics Chart -->
+          <div class="analytics-chart-card">
+            <h3 style="font-family: var(--font-sans); font-size: 1.05rem; font-weight: 700; color: #ffffff;">Delay vs. Atmospheric Visibility Correlation</h3>
+            <p style="font-size: 0.74rem; color: #94a3b8; margin-top: 2px;">Recorded schedule variance across the corridor relative to fog thickness.</p>
+            
+            <svg class="correlation-chart-canvas" id="corridor-correlation-chart" preserveAspectRatio="none">
+              <!-- Rendered via JS -->
+            </svg>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         VIEW 5: B2B SAAS FLEET WATCHLIST
+         ==================================================================== -->
+    <section id="view-fleet-watchlist" class="view-section">
+      <div class="fleet-view">
+
+        <div class="fleet-header-row">
+          <div>
+            <div style="font-size: 0.74rem; font-weight: 700; text-transform: uppercase; color: var(--brand-cyan);">Commercial SaaS Logistics Module</div>
+            <h2 style="font-family: var(--font-sans); font-size: 1.6rem; font-weight: 800; margin: 4px 0;">Dedicated Rail Freight & Parcel Fleet Monitor</h2>
+            <p style="font-size: 0.84rem; color: #94a3b8;">Multi-corridor logistics visibility with automated weather hazard attribution and SLA tracking.</p>
+          </div>
+
+          <div style="display: flex; gap: 10px;">
+            <button class="btn-export-csv" id="btn-export-fleet-csv">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export CSV Audit Log
+            </button>
+          </div>
+        </div>
+
+        <div class="board-table-card">
+          <div class="data-table-container">
+            <table class="modern-data-table">
+              <thead>
+                <tr>
+                  <th>Rake ID</th>
+                  <th>Consignment / Service</th>
+                  <th>Origin ➔ Destination</th>
+                  <th>Speed</th>
+                  <th>Corridor</th>
+                  <th>Weather Risk Exposure</th>
+                  <th>Health Score</th>
+                  <th>Variance</th>
+                </tr>
+              </thead>
+              <tbody id="fleet-table-tbody">
+                <!-- Dynamically generated via app.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ====================================================================
+       MODAL: COACH BERTH & COMPARTMENT FLOORPLAN
+       ==================================================================== -->
+  <div class="modal-overlay" id="coach-floorplan-modal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" id="modal-coach-title">Coach B4 (3-Tier AC) Floorplan</h3>
+          <div style="font-size: 0.78rem; color: #94a3b8;">Assigned Passenger Berth: <strong style="color: var(--brand-cyan);">#35 Middle Berth</strong></div>
+        </div>
+        <button class="btn-close-modal" id="btn-close-floorplan-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: #94a3b8; background: rgba(0,0,0,0.2); padding: 8px 14px; border-radius: 6px;">
+          <span>🚪 Gangway / Washroom</span>
+          <span>Compartment Bays 1 to 8</span>
+          <span>Emergency Exit 🚨</span>
+        </div>
+
+        <div class="floorplan-berth-grid" id="floorplan-berth-grid-container">
+          <!-- 64 or 72 berths generated by JS -->
+        </div>
+
+        <div style="display: flex; gap: 16px; margin-top: 20px; font-size: 0.74rem; color: #94a3b8; justify-content: center;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <div style="width: 14px; height: 14px; background: rgba(56, 189, 248, 0.2); border: 2px solid var(--brand-cyan); border-radius: 3px;"></div>
+            <span>Your Assigned Berth</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <div style="width: 14px; height: 14px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 3px;"></div>
+            <span>Occupied / General Berth</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Application Logic (ES Module) -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
