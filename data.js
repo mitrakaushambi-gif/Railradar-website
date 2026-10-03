@@ -3,7 +3,7 @@
 
 export const API_KEYS = {
   maptiler: 'mnxtRwonc66QSP7qRrko',
-  openweather: '798e006ce0b1fc5f40e2adaa2e273198',
+  openweather: ' ',
   opentopo: '789bd9c9b89a0539e1e06f58e62144b3',
   railradar: 'rg_ed4678f11c1f461a908f3317a2f1aa8c'
 };
